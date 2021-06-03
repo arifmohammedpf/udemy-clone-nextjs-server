@@ -1,5 +1,7 @@
 import express from "express";
 
+const router = express.Router();
+
 // middleware
 import { requireSignin } from "../middlewares";
 
@@ -12,8 +14,6 @@ import {
   forgotPassword,
   resetPassword,
 } from "../controllers/auth";
-
-const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
