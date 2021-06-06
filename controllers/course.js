@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import Course from "../models/course";
 import sllugify from "slugify";
 import slugify from "slugify";
+import { readFileSync } from "fs";
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -103,5 +104,94 @@ export const read = async (req, res) => {
     res.json(course);
   } catch (err) {
     console.log(err);
+  }
+};
+
+export const uploadVideo = async (req, res) => {
+  try {
+    // console.log("req.user._id", req.user._id);
+    // console.log("req.params.instructorId", req.params.instructorId);
+    if (req.user._id != req.params.instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+
+    const { video } = req.files;
+    // console.log(video);
+    if (!video) return res.status(400).send("No video");
+
+    // video params
+    const params = {
+      Bucket: "edemy-bucket",
+      Key: `${nanoid()}.${video.type.split("/")[1]}`,
+      Body: readFileSync(video.path),
+      ACL: "public-read",
+      ContentType: video.type,
+    };
+
+    // upload to s3
+    S3.upload(params, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.sendStatus(400);
+      }
+      console.log(data);
+      res.send(data);
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const removeVideo = async (req, res) => {
+  try {
+    if (req.user._id != req.params.instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+
+    const { Bucket, Key } = req.body;
+    // console.log("VIDEO REMOVE =====> ", req.body);
+
+    // video params
+    const params = {
+      Bucket,
+      Key,
+    };
+
+    // upload to s3
+    S3.deleteObject(params, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.sendStatus(400);
+      }
+      console.log(data);
+      res.send({ ok: true });
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const addLesson = async (req, res) => {
+  try {
+    const { slug, instructorId } = req.params;
+    const { title, content, video } = req.body;
+
+    if (req.user._id != instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+
+    const updated = await Course.findOneAndUpdate(
+      { slug },
+      {
+        $push: { lessons: { title, content, video, slug: slugify(title) } },
+      },
+      { new: true }
+    )
+      .populate("instructor", "_id name")
+      .exec();
+    res.json(updated);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send("Add lesson failed");
   }
 };
