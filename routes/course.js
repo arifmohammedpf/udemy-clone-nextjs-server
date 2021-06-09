@@ -3,10 +3,11 @@ import formidable from "express-formidable";
 
 const router = express.Router();
 
-// middlewares
-import { requireSignin, isInstructor, isEnrolled } from "../middlewares";
-// controller
-const {
+// middleware
+import { requireSignin, isInstructor } from "../middlewares";
+
+// controllers
+import {
   uploadImage,
   removeImage,
   create,
@@ -20,57 +21,38 @@ const {
   publishCourse,
   unpublishCourse,
   courses,
-  freeEnrollment,
   checkEnrollment,
-  paidEnrollment,
-  stripeSuccess,
-  userCourses,
-  markCompleted,
-  listCompleted,
-  markIncomplete,
-  readPublic,
-} = require("../controllers/course");
+  freeEnrollment,
+} from "../controllers/course";
 
+router.get("/courses", courses);
 // image
-router.post("/course/upload-image", requireSignin, uploadImage);
-router.post("/course/remove-image/:courseId", requireSignin, removeImage);
-// video
-router.post(
-  "/course/upload-video/:courseId",
-  requireSignin,
-  formidable({ maxFileSize: 500 * 1024 * 1024 }),
-  uploadVideo
-);
-router.post("/course/remove-video/:courseId", requireSignin, removeVideo);
+router.post("/course/upload-image", uploadImage);
+router.post("/course/remove-image", removeImage);
 // course
 router.post("/course", requireSignin, isInstructor, create);
+router.put("/course/:slug", requireSignin, update);
 router.get("/course/:slug", read);
-router.get("/course/public/:slug", readPublic);
-// update course
-router.put("/course/:courseId", requireSignin, update);
-// lessons
-router.post("/course/lesson/:courseId", requireSignin, addLesson);
-// delete
-router.post("/course/:courseId/:lessonId", requireSignin, removeLesson);
-// update
-router.post("/course/lesson/:courseId/:lessonId", requireSignin, updateLesson);
-// publish course
+router.post(
+  "/course/video-upload/:instructorId",
+  requireSignin,
+  formidable(),
+  uploadVideo
+);
+router.post("/course/video-remove/:instructorId", requireSignin, removeVideo);
+
+// publish unpublish
 router.put("/course/publish/:courseId", requireSignin, publishCourse);
-// unpublish course
 router.put("/course/unpublish/:courseId", requireSignin, unpublishCourse);
-// get routes
-router.get("/courses", courses);
-// enroll
+
+// `/api/course/lesson/${slug}/${course.instructor._id}`,
+router.post("/course/lesson/:slug/:instructorId", requireSignin, addLesson);
+router.put("/course/lesson/:slug/:instructorId", requireSignin, updateLesson);
+router.put("/course/:slug/:lessonId", requireSignin, removeLesson);
+
 router.get("/check-enrollment/:courseId", requireSignin, checkEnrollment);
+
+// enrollment
 router.post("/free-enrollment/:courseId", requireSignin, freeEnrollment);
-router.post("/paid-enrollment/:courseId", requireSignin, paidEnrollment);
-// stripe success
-router.get("/stripe-success/:courseId", requireSignin, stripeSuccess);
-// user courses
-router.get("/user-courses", requireSignin, userCourses);
-router.get("/user/course/:slug", requireSignin, isEnrolled, read);
-router.post("/mark-completed", requireSignin, markCompleted);
-router.post("/list-completed", requireSignin, listCompleted);
-router.post("/mark-incomplete", requireSignin, markIncomplete);
 
 module.exports = router;
